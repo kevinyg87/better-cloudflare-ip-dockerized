@@ -1,0 +1,55 @@
+# To set multiarch build for Docker hub automated build.
+# FROM --platform=$TARGETPLATFORM golang:alpine AS builder
+FROM golang:alpine AS builder
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+WORKDIR /go
+RUN apk add git curl --no-cache
+
+RUN set -eux; \
+    \
+	sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories; \
+	sed -i 's/uk.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories; \
+	apk --no-cache --no-progress upgrade; \
+	buildDeps=' \
+		build-base \
+		git \
+    '; \
+    \
+    apk add --no-cache --virtual .build-deps \
+		$buildDeps \
+	; \
+    \
+    git clone https://github.com/badafans/better-cloudflare-ip; \
+    cd better-cloudflare-ip/linux; \
+    sed -i -E "s/read -p .* bandwidth$/bandwidth=\$\{BANDWIDTH:-20\}/" ./src/cf.sh; \
+    sed -i -E "s/\ *\.\/fping */fping /" ./src/cf.sh; \
+    chmod +x ./configure; \
+    ./configure; \
+    make
+
+# FROM --platform=$TARGETPLATFORM alpine AS runtime
+FROM alpine AS runtime
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ENV BANDWIDTH=20
+
+COPY --from=builder /go/better-cloudflare-ip/linux/src/fping /usr/local/bin/
+COPY --from=builder /go/better-cloudflare-ip/linux/src/cf.sh /usr/local/bin/
+COPY entrypoint.sh /usr/local/bin/
+
+RUN set -eux; \
+    \
+    apk add --no-cache \
+        bash \
+        curl \
+		ca-certificates \
+	; \
+    chmod +x /usr/local/bin/*; \
+    echo "0 */6 * * * /usr/bin/flock -n /tmp/fcj.lockfile /usr/local/bin/cf.sh > /proc/1/fd/1 2>/proc/1/fd/2" > /etc/crontabs/root;
+
+WORKDIR /
+
+ENTRYPOINT [ "entrypoint.sh" ]
+CMD ["crond", "-f", "-d", "8"]
