@@ -1,11 +1,10 @@
 # To set multiarch build for Docker hub automated build.
-# FROM --platform=$TARGETPLATFORM golang:alpine AS builder
-FROM golang:alpine AS builder
+FROM --platform=$TARGETPLATFORM golang:alpine AS builder
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
 WORKDIR /go
-RUN apk add git curl --no-cache
+RUN apk add git curl perl --no-cache
 
 RUN set -eux; \
     \
@@ -30,8 +29,7 @@ RUN set -eux; \
     ./configure; \
     make
 
-# FROM --platform=$TARGETPLATFORM alpine AS runtime
-FROM alpine AS runtime
+FROM --platform=$TARGETPLATFORM alpine AS runtime
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 ENV BANDWIDTH=20
