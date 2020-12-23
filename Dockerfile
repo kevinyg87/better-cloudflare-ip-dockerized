@@ -25,6 +25,7 @@ RUN set -eux; \
     cd better-cloudflare-ip/linux; \
     sed -i -E "s/read -p .* bandwidth$/bandwidth=\$\{BANDWIDTH:-20\}/" ./src/cf.sh; \
     sed -i -E "s/\ *\.\/fping */fping /" ./src/cf.sh; \
+    echo 'echo $anycast > /data/ip.txt' > ./src/cf.sh; \
     chmod +x ./configure; \
     ./configure; \
     make
@@ -48,6 +49,8 @@ RUN set -eux; \
 	; \
     chmod +x /usr/local/bin/*; \
     echo "0 */6 * * * /usr/bin/flock -n /tmp/fcj.lockfile /usr/local/bin/cf.sh > /proc/1/fd/1 2>/proc/1/fd/2" > /etc/crontabs/root;
+
+VOLUME [ "/data" ]
 
 WORKDIR /
 
