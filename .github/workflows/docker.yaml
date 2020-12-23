@@ -72,6 +72,9 @@ jobs:
             ghcr.io/silencebay/better-cloudflare-ip:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
+      - name: Log
+        run: |
+          echo $(date +%d.%m.%Y) > log.log
       - name: Commit files
         id: commit
         run: |
